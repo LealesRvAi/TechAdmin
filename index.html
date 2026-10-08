@@ -102,7 +102,8 @@ details summary{cursor:pointer;margin-top:8px;color:var(--blue);font-weight:600}
 .entries input{padding:6px;font-size:15px}
 .running{color:var(--c-done);font-weight:700}
 /* parts */
-.part{border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin:6px 0;background:#fbfcfd}
+.part{border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin:6px 0;background:#fbfcfd;overflow-wrap:anywhere;min-width:0}
+.part .meta{white-space:pre-wrap}
 .part .ptop{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
 .pstate{font-size:13px;font-weight:700;padding:1px 8px;border-radius:10px;background:#e1e5e9}
 .pstate[data-st=requested]{background:var(--c-pna);color:#fff}
