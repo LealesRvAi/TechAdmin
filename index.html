@@ -10,9 +10,9 @@
 <style>
 :root{
   --bg:#e3e7eb; --panel:#f4f6f8; --ink:#14202b; --muted:#566573; --line:#b9c2cb;
-  --blue:#1f4e79; --blue-ink:#ffffff;
-  --s-not:#6b7783; --s-prog:#a85d00; --s-wait:#7a2e8e; --s-done:#1e7a46;
-  --danger:#a32020;
+  --blue:#1f4e79; --danger:#a32020;
+  --c-not_started:#6b7783; --c-in_progress:#a85d00; --c-tore_down:#0f6b73;
+  --c-parts_on_order:#7a2e8e; --c-pna:#b3261e; --c-on_hold:#3d5a80; --c-done:#1e7a46;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -20,42 +20,56 @@ body{font-family:"Barlow Semi Condensed",system-ui,-apple-system,"Segoe UI",sans
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:3px solid #e08a00;outline-offset:2px}
-.bar{background:var(--blue);color:var(--blue-ink);padding:10px 16px;display:flex;align-items:center;gap:12px;justify-content:space-between;position:sticky;top:0;z-index:5}
-.bar h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.2px}
+.bar{background:var(--blue);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:12px;justify-content:space-between;position:sticky;top:0;z-index:5}
+.bar h1{font-size:20px;margin:0;font-weight:700}
 .bar .who{font-size:14px;opacity:.85}
 .wrap{max-width:900px;margin:0 auto;padding:16px}
 .btn{background:var(--blue);color:#fff;border:0;border-radius:4px;padding:10px 16px;font-weight:600;min-height:44px}
 .btn.ghost{background:transparent;color:inherit;border:1px solid currentColor}
 .btn.plain{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:#fff;color:var(--danger);border:1px solid var(--danger)}
 .btn.small{padding:6px 12px;min-height:36px;font-size:15px}
 .banner{background:#fff3d6;border:1px solid #e0b54d;padding:8px 12px;margin-bottom:12px;border-radius:4px;font-size:15px}
 .err{color:var(--danger);margin:8px 0;min-height:1.2em}
-/* login */
 .login{max-width:380px;margin:12vh auto 0;padding:24px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
 .login h1{margin:0 0 4px;font-size:28px}
 .login p{margin:0 0 16px;color:var(--muted)}
 label{display:block;font-weight:600;margin:12px 0 4px}
 input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:4px;background:#fff}
 textarea{min-height:76px;resize:vertical}
-/* list */
 .toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.toolbar input{flex:1;min-width:160px}
+.toolbar input{flex:2;min-width:160px}
+.toolbar select{flex:1;min-width:120px;width:auto}
 .wo{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--blue);border-radius:4px;padding:12px 14px;margin-bottom:8px}
 .wo:hover{background:#fff}
+.wo.finished{border-left-color:var(--c-done);opacity:.85}
+.wo-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
 .wo b{font-size:19px}
 .wo .sub{color:var(--muted);font-size:15px}
-.wo .count{float:right;font-size:15px;color:var(--muted)}
-/* detail */
+.techtag{font-weight:700;font-size:15px;white-space:nowrap}
+.techtag.none{color:var(--c-pna)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{display:inline-block;color:#fff;font-size:14px;font-weight:600;padding:2px 9px;border-radius:12px;background:var(--c-not_started)}
+.chip[data-s=in_progress]{background:var(--c-in_progress)}
+.chip[data-s=tore_down]{background:var(--c-tore_down)}
+.chip[data-s=parts_on_order]{background:var(--c-parts_on_order)}
+.chip[data-s=pna]{background:var(--c-pna)}
+.chip[data-s=on_hold]{background:var(--c-on_hold)}
+.chip[data-s=done]{background:var(--c-done)}
+.progress{font-size:14px;color:var(--muted);margin-top:6px}
 .box{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin-bottom:12px}
 .box h2{margin:0 0 8px;font-size:17px;color:var(--blue);text-decoration:underline;font-weight:700}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:640px){.grid2{grid-template-columns:1fr}}
 .kv{display:flex;gap:8px;margin:2px 0}
 .kv span:first-child{color:var(--muted);min-width:82px}
-.line{background:#fff;border:1px solid var(--line);border-left:6px solid var(--s-not);border-radius:4px;margin-bottom:10px;padding:12px 14px}
-.line[data-s=in_progress]{border-left-color:var(--s-prog)}
-.line[data-s=waiting_parts]{border-left-color:var(--s-wait)}
-.line[data-s=done]{border-left-color:var(--s-done)}
+.line{background:#fff;border:1px solid var(--line);border-left:6px solid var(--c-not_started);border-radius:4px;margin-bottom:10px;padding:12px 14px}
+.line[data-s=in_progress]{border-left-color:var(--c-in_progress)}
+.line[data-s=tore_down]{border-left-color:var(--c-tore_down)}
+.line[data-s=parts_on_order]{border-left-color:var(--c-parts_on_order)}
+.line[data-s=pna]{border-left-color:var(--c-pna)}
+.line[data-s=on_hold]{border-left-color:var(--c-on_hold)}
+.line[data-s=done]{border-left-color:var(--c-done)}
 .line-head{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
 .line-head b{font-size:19px}
 .line select{width:auto;font-weight:600}
@@ -64,6 +78,7 @@ textarea{min-height:76px;resize:vertical}
 .photos .ph{position:relative;width:96px;height:96px}
 .photos img{width:100%;height:100%;object-fit:cover;border-radius:4px;border:1px solid var(--line);display:block}
 .photos .x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.65);color:#fff;border:0;border-radius:50%;width:26px;height:26px;line-height:1}
+.line-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .addrow{display:flex;gap:8px}
 .back{margin-bottom:12px}
 .hidden{display:none!important}
@@ -86,17 +101,23 @@ textarea{min-height:76px;resize:vertical}
 /* ---------- CONFIG ---------- */
 const SB_URL = "https://emlauoiecckbqriirttn.supabase.co";
 const SB_KEY = "sb_publishable_-_iDLW4lEwc0necBCcNeAA_jb_oKPfh";
+const TECHS = ["Victor","Chewie","Marcos","Ceaser","Axel","Heather","Michael"];
+const STATUS = {
+  not_started:"Not started", in_progress:"In progress", tore_down:"Tore down",
+  parts_on_order:"Parts on order", pna:"PNA", on_hold:"On hold", done:"Done"
+};
+const QUIET = ["not_started","done"]; // statuses not shown as chips on the main list
 
-const STATUS = {not_started:"Not started", in_progress:"In progress", waiting_parts:"Waiting on parts", done:"Done"};
 const sb = window.supabase.createClient(SB_URL, SB_KEY);
 const $ = s => document.querySelector(s);
 const h = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let user = null, demo = false, api = null, current = null;
+let user = null, demo = false, api = null;
+let filters = {q:"", tech:"", show:"open"};
 
 /* ---------- REAL DATA LAYER (Supabase) ---------- */
 const real = {
   async orders(){
-    const {data,error} = await sb.from("work_orders").select("*, job_lines(id,status)").order("created_at",{ascending:false});
+    const {data,error} = await sb.from("work_orders").select("*, job_lines(id,line_no,title,status)").order("created_at",{ascending:false});
     if(error) throw error; return data;
   },
   async order(id){
@@ -115,12 +136,29 @@ const real = {
     const {data,error} = await sb.from("work_orders").insert(o).select().single();
     if(error) throw error; return data;
   },
+  async updateOrder(id,patch){
+    const {error} = await sb.from("work_orders").update(patch).eq("id",id);
+    if(error) throw error;
+  },
+  async delOrder(id){
+    const {data} = await sb.from("job_lines").select("id, job_photos(path)").eq("work_order_id",id);
+    const paths = (data||[]).flatMap(l=>l.job_photos.map(p=>p.path));
+    if(paths.length) await sb.storage.from("job-photos").remove(paths);
+    const {error} = await sb.from("work_orders").delete().eq("id",id);
+    if(error) throw error;
+  },
   async addLine(woId,title,n){
     const {error} = await sb.from("job_lines").insert({work_order_id:woId,title,line_no:n});
     if(error) throw error;
   },
   async updateLine(id,patch){
     const {error} = await sb.from("job_lines").update({...patch,updated_by:user.email,updated_at:new Date().toISOString()}).eq("id",id);
+    if(error) throw error;
+  },
+  async delLine(id){
+    const {data} = await sb.from("job_photos").select("path").eq("job_line_id",id);
+    if(data && data.length) await sb.storage.from("job-photos").remove(data.map(p=>p.path));
+    const {error} = await sb.from("job_lines").delete().eq("id",id);
     if(error) throw error;
   },
   async addPhoto(lineId,blob){
@@ -139,19 +177,30 @@ const real = {
 
 /* ---------- DEMO DATA LAYER (in memory, fake customers, nothing saved) ---------- */
 const D = {orders:[
-  {id:"d1",wo_number:"10482",customer_name:"Sample, Pat",customer_phone:"555-0100",customer_city:"Anytown, CA",vehicle:"23 Thor Windsport 34J",vin:"1F66F5DN2N0A00000",plate:"9XXX000/CA",odometer:"12254",
+  {id:"d1",wo_number:"10482",tech:"Victor",customer_name:"Sample, Pat",customer_phone:"555-0100",customer_city:"Anytown, CA",vehicle:"23 Thor Windsport 34J",vin:"1F66F5DN2N0A00000",plate:"9XXX000/CA",odometer:"12254",
    job_lines:[
-    {id:"l1",line_no:1,title:"Roof peel n seal",status:"in_progress",notes:"Old sealant removed on front half. Waiting on cure time before second coat.",updated_by:"tech@example.com",updated_at:new Date().toISOString(),job_photos:[]},
-    {id:"l2",line_no:2,title:"Replace slide-out seal",status:"not_started",notes:"",updated_by:null,updated_at:null,job_photos:[]}]},
-  {id:"d2",wo_number:"10483",customer_name:"Example, Sam",customer_phone:"555-0101",customer_city:"Sample City, CA",vehicle:"19 Winnebago Vista 31K",vin:"",plate:"",odometer:"40812",
-   job_lines:[{id:"l3",line_no:1,title:"Water heater won't ignite",status:"waiting_parts",notes:"Ordered igniter board.",updated_by:"tech@example.com",updated_at:new Date().toISOString(),job_photos:[]}]}
+    {id:"l1",line_no:1,title:"Roof peel n seal",status:"done",notes:"Resealed and cured.",updated_by:"Victor",updated_at:new Date().toISOString(),job_photos:[]},
+    {id:"l2",line_no:2,title:"Replace slide-out seal",status:"in_progress",notes:"",updated_by:null,updated_at:null,job_photos:[]},
+    {id:"l3",line_no:3,title:"Fridge control board",status:"pna",notes:"Dealer says 3 weeks out. Looking at aftermarket.",updated_by:"Victor",updated_at:new Date().toISOString(),job_photos:[]},
+    {id:"l4",line_no:4,title:"Awning fabric",status:"on_hold",notes:"Customer deciding on color.",updated_by:"Victor",updated_at:new Date().toISOString(),job_photos:[]}]},
+  {id:"d2",wo_number:"10483",tech:"Chewie",customer_name:"Example, Sam",customer_phone:"555-0101",customer_city:"Sample City, CA",vehicle:"19 Winnebago Vista 31K",vin:"",plate:"",odometer:"40812",
+   job_lines:[{id:"l5",line_no:1,title:"Water heater won't ignite",status:"parts_on_order",notes:"Ordered igniter board.",updated_by:"Chewie",updated_at:new Date().toISOString(),job_photos:[]},
+              {id:"l6",line_no:2,title:"Front cap leak",status:"tore_down",notes:"",updated_by:"Chewie",updated_at:new Date().toISOString(),job_photos:[]}]},
+  {id:"d3",wo_number:"10479",tech:"",customer_name:"Demo, Alex",customer_phone:"555-0102",customer_city:"Example Town, CA",vehicle:"21 Jayco Jay Flight 28BHS",vin:"",plate:"",odometer:"",
+   job_lines:[{id:"l7",line_no:1,title:"Winterize",status:"not_started",notes:"",updated_by:null,updated_at:null,job_photos:[]}]},
+  {id:"d4",wo_number:"10470",tech:"Marcos",customer_name:"Test, Jo",customer_phone:"555-0103",customer_city:"Sample City, CA",vehicle:"18 Forest River Salem 27RK",vin:"",plate:"",odometer:"",
+   job_lines:[{id:"l8",line_no:1,title:"Brake controller install",status:"done",notes:"",updated_by:"Marcos",updated_at:new Date().toISOString(),job_photos:[]}]}
 ]};
+const find = id => D.orders.find(o=>o.id===id);
 const fake = {
-  async orders(){return D.orders.map(o=>({...o,job_lines:o.job_lines.map(l=>({id:l.id,status:l.status}))}))},
-  async order(id){return D.orders.find(o=>o.id===id)},
+  async orders(){return D.orders.map(o=>({...o,job_lines:o.job_lines.map(l=>({id:l.id,line_no:l.line_no,title:l.title,status:l.status}))}))},
+  async order(id){return find(id)},
   async addOrder(o){const n={...o,id:"d"+Date.now(),job_lines:[]};D.orders.unshift(n);return n},
-  async addLine(woId,title,n){D.orders.find(o=>o.id===woId).job_lines.push({id:"l"+Date.now(),line_no:n,title,status:"not_started",notes:"",job_photos:[]})},
+  async updateOrder(id,patch){Object.assign(find(id),patch)},
+  async delOrder(id){D.orders=D.orders.filter(o=>o.id!==id)},
+  async addLine(woId,title,n){find(woId).job_lines.push({id:"l"+Date.now(),line_no:n,title,status:"not_started",notes:"",job_photos:[]})},
   async updateLine(id,patch){D.orders.forEach(o=>o.job_lines.forEach(l=>{if(l.id===id)Object.assign(l,patch,{updated_by:"demo",updated_at:new Date().toISOString()})}))},
+  async delLine(id){D.orders.forEach(o=>{o.job_lines=o.job_lines.filter(l=>l.id!==id)})},
   async addPhoto(lineId,blob){D.orders.forEach(o=>o.job_lines.forEach(l=>{if(l.id===lineId)l.job_photos.push({id:"p"+Date.now(),url:URL.createObjectURL(blob)})}))},
   async delPhoto(p){D.orders.forEach(o=>o.job_lines.forEach(l=>{l.job_photos=l.job_photos.filter(x=>x.id!==p.id)}))}
 };
@@ -173,6 +222,8 @@ function shrink(file, max=1600, q=0.72){
   });
 }
 const fmt = t => t ? new Date(t).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : "";
+const techOptions = sel => `<option value="">Unassigned</option>` + TECHS.map(t=>`<option ${t===sel?"selected":""}>${t}</option>`).join("");
+const isFinished = o => o.job_lines.length > 0 && o.job_lines.every(l=>l.status==="done");
 function setChrome(){
   $("#who").textContent = demo ? "Demo mode" : (user ? user.email : "");
   $("#signout").classList.toggle("hidden", !user && !demo);
@@ -201,24 +252,45 @@ function showLogin(){
 }
 
 async function showList(){
-  current = null;
   $("#app").innerHTML = `
     ${demo?'<div class="banner">Demo mode: sample data only. Nothing here is saved.</div>':''}
-    <div class="toolbar"><input id="q" type="search" placeholder="Search customer, vehicle, or WO #" aria-label="Search work orders"><button class="btn" id="new">New work order</button></div>
+    <div class="toolbar">
+      <input id="q" type="search" placeholder="Search customer, vehicle, or WO #" aria-label="Search work orders" value="${h(filters.q)}">
+      <select id="ft" aria-label="Filter by tech"><option value="">All techs</option><option value="__none">Unassigned</option>${TECHS.map(t=>`<option ${t===filters.tech?"selected":""}>${t}</option>`).join("")}</select>
+      <select id="fs" aria-label="Show"><option value="open" ${filters.show==="open"?"selected":""}>Open</option><option value="finished" ${filters.show==="finished"?"selected":""}>Finished</option><option value="all" ${filters.show==="all"?"selected":""}>All</option></select>
+      <button class="btn" id="new">New work order</button>
+    </div>
     <div id="newform" class="hidden"></div>
     <div id="list">Loading…</div>`;
+  $("#ft").value = filters.tech;
   let rows = [];
   try{ rows = await api.orders(); }catch(e){ $("#list").textContent=""; return fail(e); }
   const draw = ()=>{
-    const q = $("#q").value.toLowerCase();
-    const f = rows.filter(o=>[o.wo_number,o.customer_name,o.vehicle].join(" ").toLowerCase().includes(q));
+    const q = filters.q.toLowerCase();
+    const f = rows.filter(o=>{
+      if(![o.wo_number,o.customer_name,o.vehicle,o.tech].join(" ").toLowerCase().includes(q)) return false;
+      if(filters.tech==="__none" && o.tech) return false;
+      if(filters.tech && filters.tech!=="__none" && o.tech!==filters.tech) return false;
+      const fin = isFinished(o);
+      if(filters.show==="open" && fin) return false;
+      if(filters.show==="finished" && !fin) return false;
+      return true;
+    });
     $("#list").innerHTML = f.length ? f.map(o=>{
-      const total = o.job_lines.length, done = o.job_lines.filter(l=>l.status==="done").length;
-      return `<button class="wo" data-id="${h(o.id)}"><span class="count">${done} of ${total} done</span><b>${h(o.customer_name)}</b><div class="sub">${h(o.vehicle||"No vehicle listed")}${o.wo_number?" · WO "+h(o.wo_number):""}</div></button>`;
-    }).join("") : `<p>No work orders yet. Use New work order to add one.</p>`;
+      const lines = [...o.job_lines].sort((a,b)=>a.line_no-b.line_no);
+      const done = lines.filter(l=>l.status==="done").length;
+      const chips = lines.filter(l=>!QUIET.includes(l.status)).map(l=>`<span class="chip" data-s="${h(l.status)}">Job ${h(l.line_no)}: ${h(STATUS[l.status])}</span>`).join("");
+      return `<button class="wo ${isFinished(o)?"finished":""}" data-id="${h(o.id)}">
+        <div class="wo-top"><b>${h(o.customer_name)}</b><span class="techtag ${o.tech?"":"none"}">${o.tech?h(o.tech):"Unassigned"}</span></div>
+        <div class="sub">${h(o.vehicle||"No vehicle listed")}${o.wo_number?" · WO "+h(o.wo_number):""}</div>
+        ${chips?`<div class="chips">${chips}</div>`:""}
+        <div class="progress">${done} of ${lines.length} jobs done</div></button>`;
+    }).join("") : `<p>No work orders match. Change the filters or use New work order.</p>`;
   };
   draw();
-  $("#q").oninput = draw;
+  $("#q").oninput = e=>{ filters.q = e.target.value; draw(); };
+  $("#ft").onchange = e=>{ filters.tech = e.target.value; draw(); };
+  $("#fs").onchange = e=>{ filters.show = e.target.value; draw(); };
   $("#list").onclick = e=>{ const b=e.target.closest(".wo"); if(b) showOrder(b.dataset.id); };
   $("#new").onclick = ()=>{
     const f = $("#newform"); f.classList.toggle("hidden");
@@ -226,6 +298,7 @@ async function showList(){
     f.innerHTML = `<form class="box" id="nf"><h2>New work order</h2>
       <div class="grid2">
         <div><label>Customer name</label><input name="customer_name" required></div>
+        <div><label>Assigned tech</label><select name="tech">${techOptions("")}</select></div>
         <div><label>Phone</label><input name="customer_phone" type="tel"></div>
         <div><label>City</label><input name="customer_city"></div>
         <div><label>WO number</label><input name="wo_number"></div>
@@ -246,7 +319,6 @@ async function showList(){
 async function showOrder(id){
   $("#app").innerHTML = "Loading…";
   let o; try{ o = await api.order(id); }catch(e){ showList(); return fail(e); }
-  current = id;
   const lines = o.job_lines.map(l=>`
     <div class="line" data-s="${h(l.status)}" data-id="${h(l.id)}">
       <div class="line-head">
@@ -259,7 +331,10 @@ async function showOrder(id){
       <div class="photos">
         ${l.job_photos.map(p=>`<div class="ph"><img src="${h(p.url)}" alt="Job photo" data-full="${h(p.url)}"><button class="x" data-pid="${h(p.id)}" aria-label="Delete photo">×</button></div>`).join("")}
       </div>
-      <p style="margin:10px 0 0"><label class="btn plain small" style="display:inline-block;margin:0">Add photo<input class="file" type="file" accept="image/*" capture="environment" multiple hidden></label></p>
+      <div class="line-actions">
+        <label class="btn plain small" style="margin:0">Add photo<input class="file" type="file" accept="image/*" capture="environment" multiple hidden></label>
+        <button class="btn danger small delline" type="button">Delete task</button>
+      </div>
     </div>`).join("");
   $("#app").innerHTML = `
     ${demo?'<div class="banner">Demo mode: sample data only. Nothing here is saved.</div>':''}
@@ -276,14 +351,25 @@ async function showOrder(id){
         <div class="kv"><span>VIN</span><span>${h(o.vin)}</span></div>
         <div class="kv"><span>Plate</span><span>${h(o.plate)}</span></div></div>
     </div>
+    <div class="box"><h2>Assigned tech</h2>
+      <select id="tech" aria-label="Assigned tech">${techOptions(o.tech||"")}</select></div>
     <div class="box"><h2>Work order tasks</h2>
       ${lines || "<p>No tasks yet. Add the first one below.</p>"}
       <form class="addrow" id="al"><input id="nl" placeholder="New task, e.g. Replace awning fabric" required aria-label="New task"><button class="btn">Add task</button></form>
-    </div>`;
+    </div>
+    <p><button class="btn danger" id="delwo" type="button">Delete this work order</button></p>`;
   $("#back").onclick = showList;
+  $("#tech").onchange = async e=>{
+    try{ await api.updateOrder(o.id,{tech:e.target.value}); }catch(x){ fail(x); }
+  };
   $("#al").onsubmit = async e=>{
     e.preventDefault();
-    try{ await api.addLine(o.id,$("#nl").value.trim(),o.job_lines.length+1); showOrder(o.id); }catch(x){ fail(x); }
+    const next = Math.max(0,...o.job_lines.map(l=>l.line_no)) + 1;
+    try{ await api.addLine(o.id,$("#nl").value.trim(),next); showOrder(o.id); }catch(x){ fail(x); }
+  };
+  $("#delwo").onclick = async ()=>{
+    if(!confirm(`Delete the work order for ${o.customer_name}, including all its tasks and photos? This cannot be undone.`)) return;
+    try{ await api.delOrder(o.id); showList(); }catch(x){ fail(x); }
   };
   document.querySelectorAll(".line").forEach(el=>{
     const id = el.dataset.id;
@@ -299,6 +385,10 @@ async function showOrder(id){
       const files = [...e.target.files]; if(!files.length) return;
       el.querySelector(".meta").textContent = "Uploading " + files.length + " photo" + (files.length>1?"s":"") + "…";
       try{ for(const f of files) await api.addPhoto(id, await shrink(f)); showOrder(o.id); }catch(x){ fail(x); showOrder(o.id); }
+    };
+    el.querySelector(".delline").onclick = async ()=>{
+      if(!confirm("Delete this task and its photos? This cannot be undone.")) return;
+      try{ await api.delLine(id); showOrder(o.id); }catch(x){ fail(x); }
     };
     el.querySelectorAll(".x").forEach(b=>b.onclick = async ()=>{
       if(!confirm("Delete this photo?")) return;
