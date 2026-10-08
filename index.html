@@ -104,6 +104,8 @@ details summary{cursor:pointer;margin-top:8px;color:var(--blue);font-weight:600}
 /* parts */
 .part{border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin:6px 0;background:#fbfcfd;overflow-wrap:anywhere;min-width:0}
 .part .meta{white-space:pre-wrap}
+.noteed{margin-top:8px}
+.noteed textarea{min-height:96px}
 .part .ptop{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
 .pstate{font-size:13px;font-weight:700;padding:1px 8px;border-radius:10px;background:#e1e5e9}
 .pstate[data-st=requested]{background:var(--c-pna);color:#fff}
@@ -146,7 +148,7 @@ const STATUS = {
   parts_on_order:"Parts on order", pna:"PNA", on_hold:"On hold", done:"Done"
 };
 const QUIET = ["not_started","done"];
-const DAY = 864e5, STALE_MS = 2*DAY;           // red after 2 days with no update
+const DAY = 864e5, STALE_MS = 3*DAY;           // red after 3 days with no update
 const PART_STATE = {requested:"Requested", ordered:"Ordered", received:"Received", used:"Used", cancelled:"Cancelled"};
 
 const sb = window.supabase.createClient(SB_URL, SB_KEY);
@@ -375,7 +377,7 @@ function setChrome(){
 function fail(e){ alert("Something went wrong: " + (e.message || e)); }
 function rerender(){ view.name==="order" ? showOrder(view.id) : view.name==="parts" ? showParts() : showList(); }
 
-/* how long a parts job has waited, and whether it needs an update (2 days of nothing = stale) */
+/* how long a parts job has waited, and whether it needs an update (3 days of nothing = stale) */
 function lineAge(l){
   const entered = new Date(l.status_changed_at || Date.now()).getTime();
   let last = entered, by = null;
@@ -465,12 +467,12 @@ function partItem(p){
   if(p.kind==="request" && manage){
     if(p.state==="requested") btns.push(partBtn(p,"ordered","Mark ordered"));
     if(p.state==="ordered"){ btns.push(partBtn(p,"received","Mark received")); btns.push(partBtn(p,"requested","Back to requested")); }
-    if(p.state!=="received") btns.push(partBtn(p,"note","Add note"));
+    btns.push(partBtn(p,"note",p.note?"Edit note":"Add note"));
   }
   if(manage || (own && (p.state==="requested" || p.state==="used"))) btns.push(partBtn(p,"remove","Remove"));
   return `<div class="part"><div class="ptop"><span class="pdesc"><b>${h(+p.qty)}×</b> ${h(p.description)}${p.part_number?` <span class="meta">#${h(p.part_number)}</span>`:""}</span><span class="pstate" data-st="${h(p.state)}">${h(PART_STATE[p.state]||p.state)}</span></div>
-    ${p.note?`<div class="meta">Note: ${h(p.note)}</div>`:""}
-    <div class="meta">Entered ${h(fmt(p.created_at))} by ${h(nameOf(p.created_by))}${p.state==="requested"||p.state==="ordered"?" · updated "+h(ago(new Date(p.updated_at).getTime())):""}</div>
+    ${p.note?`<div class="meta"><b>Parts note:</b> ${h(p.note)}${p.note_by?`\nUpdated by ${h(nameOf(p.note_by))}, ${h(fmt(p.note_at))}`:""}</div>`:""}
+    <div class="meta">Entered ${h(fmt(p.created_at))} by ${h(nameOf(p.created_by))}${p.state==="requested"||p.state==="ordered"?" · last updated "+h(ago(new Date(p.updated_at).getTime()))+(p.updated_by?" by "+h(nameOf(p.updated_by)):""):""}</div>
     ${btns.length?`<div class="line-actions">${btns.join("")}</div>`:""}</div>`;
 }
 function partsBox(l){
@@ -504,18 +506,34 @@ async function syncStatus(lineId){
   const want = open.some(p=>p.state==="requested") ? "pna" : "parts_on_order";
   if(status !== want) await api.updateLine(lineId,{status:want});
 }
+function openNoteEditor(b, id){
+  const box = b.closest(".part");
+  if(!box || box.querySelector(".noteed")) return;
+  const ed = document.createElement("div");
+  ed.className = "noteed";
+  ed.innerHTML = `<label>Parts note (vendor, ETA, order number, what you found out)</label>
+    <textarea rows="4">${h(b.dataset.note||"")}</textarea>
+    <div class="line-actions"><button class="btn small" type="button" data-x="save">Save note</button><button class="btn plain small" type="button" data-x="cancel">Cancel</button></div>`;
+  box.appendChild(ed);
+  const ta = ed.querySelector("textarea"); ta.focus();
+  ed.querySelector('[data-x="cancel"]').onclick = ()=>ed.remove();
+  ed.querySelector('[data-x="save"]').onclick = async ()=>{
+    try{ await api.updatePart(id,{note:ta.value,note_by:me(),note_at:new Date().toISOString()}); rerender(); }catch(x){ fail(x); }
+  };
+}
 async function partAction(b){
   const id = b.dataset.pid, lid = b.dataset.lid, act = b.dataset.act, isReq = b.dataset.kind==="request";
   try{
     if(act==="ordered"){
-      const note = prompt("Vendor / ETA (optional)", b.dataset.note||""); if(note===null) return;
-      await api.updatePart(id,{state:"ordered",note});
+      const old = b.dataset.note||"";
+      const note = prompt("Vendor / ETA (optional)", old); if(note===null) return;
+      const patch = {state:"ordered"};
+      if(note !== old){ patch.note = note; patch.note_by = me(); patch.note_at = new Date().toISOString(); }
+      await api.updatePart(id,patch);
     }else if(act==="received"){ await api.updatePart(id,{state:"received"}); }
     else if(act==="requested"){ await api.updatePart(id,{state:"requested"}); }
-    else if(act==="note"){
-      const note = prompt("Note (vendor, ETA, order number)", b.dataset.note||""); if(note===null) return;
-      await api.updatePart(id,{note});
-    }else if(act==="remove"){
+    else if(act==="note"){ openNoteEditor(b,id); return; }
+    else if(act==="remove"){
       if(!confirm("Remove this part entry?")) return;
       await api.delPart(id);
     }
@@ -657,7 +675,7 @@ async function showParts(){
     ${demoBanner()}
     <div id="clockbar"></div>
     ${tabs("parts")}
-    <p class="meta" style="font-size:15px;margin-top:0">Jobs marked PNA or Parts on order. A red card means nobody has updated it in 2 days.</p>
+    <p class="meta" style="font-size:15px;margin-top:0">Jobs marked PNA or Parts on order. A red card means nobody has updated it in 3 days.</p>
     <div id="pq">Loading…</div>`;
   bindDemo(); bindTabs(); refreshClock();
   let rows = [];
@@ -700,8 +718,8 @@ async function showOrder(id){
         <b>${h(l.line_no)}. ${h(l.title)}</b>
         <select class="st" aria-label="Status for ${h(l.title)}">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${k===l.status?"selected":""}>${v}</option>`).join("")}</select>
       </div>
-      <label>Notes</label>
-      <textarea class="nt" placeholder="What was done, what is left">${h(l.notes)}</textarea>
+      <label>${isParts()?"Tech notes (read only)":"Notes"}</label>
+      <textarea class="nt" placeholder="What was done, what is left" ${isParts()?"readonly":""}>${h(l.notes)}</textarea>
       <div class="meta">${l.updated_at?"Last update "+h(fmt(l.updated_at))+(l.updated_by?" by "+h(nameOf(l.updated_by)):""):"No updates yet"}</div>
       ${canWork()?timeBox(l):""}
       ${partsBox(l)}
