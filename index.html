@@ -378,12 +378,13 @@ function rerender(){ view.name==="order" ? showOrder(view.id) : view.name==="par
 /* how long a parts job has waited, and whether it needs an update (2 days of nothing = stale) */
 function lineAge(l){
   const entered = new Date(l.status_changed_at || Date.now()).getTime();
-  let last = entered;
-  if(l.parts_checked_at) last = Math.max(last, new Date(l.parts_checked_at).getTime());
+  let last = entered, by = null;
+  const bump = (t, who) => { if(t >= last){ last = t; by = who || null; } };
+  if(l.parts_checked_at) bump(new Date(l.parts_checked_at).getTime(), l.parts_checked_by);
   (l.parts_items||[]).forEach(p=>{
-    if(p.kind==="request" && (p.state==="requested" || p.state==="ordered")) last = Math.max(last, new Date(p.updated_at).getTime());
+    if(p.kind==="request" && (p.state==="requested" || p.state==="ordered")) bump(new Date(p.updated_at).getTime(), p.updated_by);
   });
-  return {entered, last, stale: Date.now()-last >= STALE_MS};
+  return {entered, last, by, stale: Date.now()-last >= STALE_MS};
 }
 
 /* time clock helpers */
@@ -478,7 +479,7 @@ function partsBox(l){
   let age = "";
   if(isPartsStatus(l.status)){
     const a = lineAge(l);
-    age = `<div class="agebar ${a.stale?"needs":""}">${h(STATUS[l.status])} since ${h(fmt(a.entered))} (${h(ago(a.entered))}) · last update ${h(ago(a.last))}${a.stale?" · NEEDS UPDATE":""}</div>`;
+    age = `<div class="agebar ${a.stale?"needs":""}">${h(STATUS[l.status])} since ${h(fmt(a.entered))} (${h(ago(a.entered))}) · last update ${h(ago(a.last))}${a.by?" by "+h(nameOf(a.by)):""}${a.stale?" · NEEDS UPDATE":""}</div>`;
   }
   const form = (canWork() || isParts()) ? `<form class="partform" data-lid="${h(l.id)}">
       <textarea name="description" rows="3" required aria-label="Part or details" placeholder="Part name, or explain what you need in a few sentences"></textarea>
@@ -672,7 +673,7 @@ async function showParts(){
       <div class="wo-top"><b>${h(w.customer_name)}</b><span class="techtag ${w.tech?"":"none"}">${w.tech?h(w.tech):"Unassigned"}</span></div>
       <div class="sub" style="color:var(--muted);font-size:15px">${h(w.vehicle||"")}${w.wo_number?" · WO "+h(w.wo_number):""} · Job ${h(l.line_no)}: ${h(l.title)}</div>
       <div class="agebar ${a.stale?"needs":""}"><span class="chip" data-s="${h(l.status)}">${h(STATUS[l.status])}</span>
-        Entered ${h(fmt(a.entered))} (${h(ago(a.entered))}) · last update ${h(ago(a.last))}${a.stale?" · NEEDS UPDATE":""}</div>
+        Entered ${h(fmt(a.entered))} (${h(ago(a.entered))}) · last update ${h(ago(a.last))}${a.by?" by "+h(nameOf(a.by)):""}${a.stale?" · NEEDS UPDATE":""}</div>
       ${items.length ? items.map(partItem).join("") : `<div class="meta">No part entries yet for this job.</div>`}
       <div class="line-actions">
         ${manage?`<button class="btn small pqchk" type="button">Checked, still waiting</button>
@@ -683,7 +684,7 @@ async function showParts(){
     const id = el.dataset.id;
     el.querySelector(".pqopen").onclick = ()=>showOrder(el.dataset.wo);
     const chk = el.querySelector(".pqchk");
-    if(chk) chk.onclick = async ()=>{ try{ await api.updateLine(id,{parts_checked_at:new Date().toISOString()}); showParts(); }catch(x){ fail(x); } };
+    if(chk) chk.onclick = async ()=>{ try{ await api.updateLine(id,{parts_checked_at:new Date().toISOString(),parts_checked_by:me()}); showParts(); }catch(x){ fail(x); } };
     const st = el.querySelector(".pqst");
     if(st) st.onchange = async e=>{ try{ await api.updateLine(id,{status:e.target.value}); showParts(); }catch(x){ fail(x); } };
   });
