@@ -80,6 +80,19 @@ textarea{min-height:76px;resize:vertical}
 .photos .x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.65);color:#fff;border:0;border-radius:50%;width:26px;height:26px;line-height:1}
 .line-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .addrow{display:flex;gap:8px}
+.clockbar{background:#173b1f;color:#fff;border-radius:4px;padding:10px 14px;margin-bottom:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.clockbar .live{font-weight:700;margin-left:6px}
+.timebox{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.timehead{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.total{font-weight:700;font-size:18px}
+.btn.go{background:var(--c-done)}
+.btn.stop{background:var(--c-pna)}
+details summary{cursor:pointer;margin-top:8px;color:var(--blue);font-weight:600}
+.entries{width:100%;border-collapse:collapse;margin-top:6px;font-size:15px}
+.entries td{padding:5px 6px;border-bottom:1px solid #e1e5e9;vertical-align:middle}
+.entries label{margin:6px 0 2px;font-size:14px}
+.entries input{padding:6px;font-size:15px}
+.running{color:var(--c-done);font-weight:700}
 .back{margin-bottom:12px}
 .hidden{display:none!important}
 #lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:20}
@@ -113,15 +126,16 @@ const $ = s => document.querySelector(s);
 const h = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let user = null, demo = false, api = null;
 let filters = {q:"", tech:"", show:"open"};
+let view = {name:"list"};
 
 /* ---------- REAL DATA LAYER (Supabase) ---------- */
 const real = {
   async orders(){
-    const {data,error} = await sb.from("work_orders").select("*, job_lines(id,line_no,title,status)").order("created_at",{ascending:false});
+    const {data,error} = await sb.from("work_orders").select("*, job_lines(id,line_no,title,status,time_entries(clock_in,clock_out))").order("created_at",{ascending:false});
     if(error) throw error; return data;
   },
   async order(id){
-    const {data,error} = await sb.from("work_orders").select("*, job_lines(*, job_photos(*))").eq("id",id).single();
+    const {data,error} = await sb.from("work_orders").select("*, job_lines(*, job_photos(*), time_entries(*))").eq("id",id).single();
     if(error) throw error;
     data.job_lines.sort((a,b)=>a.line_no-b.line_no);
     const paths = data.job_lines.flatMap(l=>l.job_photos.map(p=>p.path));
@@ -168,6 +182,29 @@ const real = {
     const {error} = await sb.from("job_photos").insert({job_line_id:lineId,path,uploaded_by:user.email});
     if(error) throw error;
   },
+  async myOpen(){
+    const {data,error} = await sb.from("time_entries").select("*, job_lines(line_no,title,work_order_id,work_orders(customer_name))").eq("tech_email",user.email).is("clock_out",null).limit(1);
+    if(error) throw error; return (data && data[0]) || null;
+  },
+  async clockIn(lineId){
+    const t = new Date().toISOString();
+    const a = await sb.from("time_entries").update({clock_out:t}).eq("tech_email",user.email).is("clock_out",null);
+    if(a.error) throw a.error;
+    const {error} = await sb.from("time_entries").insert({job_line_id:lineId,tech_email:user.email,clock_in:t});
+    if(error) throw error;
+  },
+  async clockOut(id){
+    const {error} = await sb.from("time_entries").update({clock_out:new Date().toISOString()}).eq("id",id);
+    if(error) throw error;
+  },
+  async updateEntry(id,patch){
+    const {error} = await sb.from("time_entries").update(patch).eq("id",id);
+    if(error) throw error;
+  },
+  async delEntry(id){
+    const {error} = await sb.from("time_entries").delete().eq("id",id);
+    if(error) throw error;
+  },
   async delPhoto(p){
     await sb.storage.from("job-photos").remove([p.path]);
     const {error} = await sb.from("job_photos").delete().eq("id",p.id);
@@ -192,8 +229,16 @@ const D = {orders:[
    job_lines:[{id:"l8",line_no:1,title:"Brake controller install",status:"done",notes:"",updated_by:"Marcos",updated_at:new Date().toISOString(),job_photos:[]}]}
 ]};
 const find = id => D.orders.find(o=>o.id===id);
+const allEntries = fn => D.orders.forEach(o=>o.job_lines.forEach(l=>(l.time_entries||[]).forEach(fn)));
+(()=>{
+  const H = 3600000, t0 = Date.now();
+  const te = (a,b,who)=>({id:"t"+Math.random(),tech_email:who,clock_in:new Date(t0-a*H).toISOString(),clock_out:b==null?null:new Date(t0-b*H).toISOString()});
+  D.orders[0].job_lines[0].time_entries = [te(30,28.5,"victor@shop"),te(27,25,"victor@shop")];
+  D.orders[0].job_lines[1].time_entries = [te(5,4,"victor@shop")];
+  D.orders[1].job_lines[0].time_entries = [te(26,24,"chewie@shop")];
+})();
 const fake = {
-  async orders(){return D.orders.map(o=>({...o,job_lines:o.job_lines.map(l=>({id:l.id,line_no:l.line_no,title:l.title,status:l.status}))}))},
+  async orders(){return D.orders.map(o=>({...o,job_lines:o.job_lines.map(l=>({id:l.id,line_no:l.line_no,title:l.title,status:l.status,time_entries:l.time_entries||[]}))}))},
   async order(id){return find(id)},
   async addOrder(o){const n={...o,id:"d"+Date.now(),job_lines:[]};D.orders.unshift(n);return n},
   async updateOrder(id,patch){Object.assign(find(id),patch)},
@@ -202,7 +247,20 @@ const fake = {
   async updateLine(id,patch){D.orders.forEach(o=>o.job_lines.forEach(l=>{if(l.id===id)Object.assign(l,patch,{updated_by:"demo",updated_at:new Date().toISOString()})}))},
   async delLine(id){D.orders.forEach(o=>{o.job_lines=o.job_lines.filter(l=>l.id!==id)})},
   async addPhoto(lineId,blob){D.orders.forEach(o=>o.job_lines.forEach(l=>{if(l.id===lineId)l.job_photos.push({id:"p"+Date.now(),url:URL.createObjectURL(blob)})}))},
-  async delPhoto(p){D.orders.forEach(o=>o.job_lines.forEach(l=>{l.job_photos=l.job_photos.filter(x=>x.id!==p.id)}))}
+  async delPhoto(p){D.orders.forEach(o=>o.job_lines.forEach(l=>{l.job_photos=l.job_photos.filter(x=>x.id!==p.id)}))},
+  async myOpen(){
+    for(const o of D.orders) for(const l of o.job_lines) for(const e of (l.time_entries||[]))
+      if(e.tech_email==="demo" && !e.clock_out) return {...e,job_lines:{line_no:l.line_no,title:l.title,work_order_id:o.id,work_orders:{customer_name:o.customer_name}}};
+    return null;
+  },
+  async clockIn(lineId){
+    const t = new Date().toISOString();
+    allEntries(e=>{ if(e.tech_email==="demo" && !e.clock_out) e.clock_out = t; });
+    D.orders.forEach(o=>o.job_lines.forEach(l=>{ if(l.id===lineId){ l.time_entries = l.time_entries||[]; l.time_entries.push({id:"t"+Date.now(),tech_email:"demo",clock_in:t,clock_out:null}); }}));
+  },
+  async clockOut(id){ const t = new Date().toISOString(); allEntries(e=>{ if(e.id===id) e.clock_out = t; }); },
+  async updateEntry(id,patch){ allEntries(e=>{ if(e.id===id) Object.assign(e,patch); }); },
+  async delEntry(id){ D.orders.forEach(o=>o.job_lines.forEach(l=>{ l.time_entries = (l.time_entries||[]).filter(e=>e.id!==id); })); }
 };
 
 /* ---------- HELPERS ---------- */
@@ -224,6 +282,58 @@ function shrink(file, max=1600, q=0.72){
 const fmt = t => t ? new Date(t).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : "";
 const techOptions = sel => `<option value="">Unassigned</option>` + TECHS.map(t=>`<option ${t===sel?"selected":""}>${t}</option>`).join("");
 const isFinished = o => o.job_lines.length > 0 && o.job_lines.every(l=>l.status==="done");
+
+/* time clock helpers */
+const entryMs = e => (e.clock_out ? new Date(e.clock_out) : new Date()) - new Date(e.clock_in);
+const sumMs = list => (list||[]).reduce((n,e)=>n+Math.max(0,entryMs(e)),0);
+const fmtDur = ms => { const m = Math.round(ms/60000); return Math.floor(m/60)+"h "+String(m%60).padStart(2,"0")+"m"; };
+const hours = ms => (ms/3600000).toFixed(2);
+const nameOf = em => { const n = String(em||"").split("@")[0]; return n ? n.charAt(0).toUpperCase()+n.slice(1) : "?"; };
+const toLocal = iso => { if(!iso) return ""; const d = new Date(iso); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
+const fromLocal = v => v ? new Date(v).toISOString() : null;
+function liveSpan(list, cls="", dec=false){
+  const L = list||[], closed = sumMs(L.filter(e=>e.clock_out)), opens = L.filter(e=>!e.clock_out);
+  const s = opens.reduce((n,e)=>n+new Date(e.clock_in).getTime(),0);
+  const ms = closed + opens.length*Date.now() - s;
+  return `<span class="live ${cls}" data-closed="${closed}" data-n="${opens.length}" data-s="${s}" ${dec?'data-dec="1"':""}>${fmtDur(ms)}${dec?" ("+hours(ms)+" h)":""}</span>`;
+}
+function tickLive(){
+  const now = Date.now();
+  document.querySelectorAll(".live").forEach(el=>{
+    const ms = +el.dataset.closed + (+el.dataset.n)*now - (+el.dataset.s);
+    el.textContent = fmtDur(ms) + (el.dataset.dec ? " ("+hours(ms)+" h)" : "");
+  });
+}
+setInterval(tickLive, 30000);
+
+async function refreshClock(){
+  const box = $("#clockbar"); if(!box) return;
+  let e = null; try{ e = await api.myOpen(); }catch(x){}
+  if(!e){ box.innerHTML = ""; return; }
+  const l = e.job_lines || {}, w = l.work_orders || {};
+  box.innerHTML = `<div class="clockbar"><div>Clocked in: <b>Job ${h(l.line_no)} ${h(l.title)}</b>, ${h(w.customer_name)}<span class="live" data-closed="0" data-n="1" data-s="${new Date(e.clock_in).getTime()}"></span></div>
+    <div><button class="btn small plain" id="cgo" type="button">Open</button> <button class="btn small stop" id="cout" type="button">Clock out</button></div></div>`;
+  tickLive();
+  $("#cgo").onclick = ()=>showOrder(l.work_order_id);
+  $("#cout").onclick = async ()=>{
+    try{ await api.clockOut(e.id); view.name==="order" ? showOrder(view.id) : showList(); }catch(x){ fail(x); }
+  };
+}
+
+function timeBox(l){
+  const me = demo ? "demo" : (user && user.email);
+  const ents = [...(l.time_entries||[])].sort((a,b)=>new Date(a.clock_in)-new Date(b.clock_in));
+  const mine = ents.find(e=>!e.clock_out && e.tech_email===me);
+  const rows = ents.map(e=>`<tr data-eid="${h(e.id)}" data-in="${h(e.clock_in)}" data-out="${h(e.clock_out||"")}">
+    <td>${h(nameOf(e.tech_email))}</td>
+    <td>${h(fmt(e.clock_in))} to ${e.clock_out?h(fmt(e.clock_out)):'<span class="running">running</span>'}</td>
+    <td>${e.clock_out?h(fmtDur(entryMs(e))):""}</td>
+    <td><button class="btn plain small editent" type="button">Edit</button></td></tr>`).join("");
+  return `<div class="timebox">
+    <div class="timehead"><span>Time on this job: <span class="total">${liveSpan(ents,"",true)}</span></span>
+      <button class="btn small clk ${mine?"stop":"go"}" type="button" data-mode="${mine?"out":"in"}" data-eid="${mine?h(mine.id):""}">${mine?"Clock out":"Clock in"}</button></div>
+    ${ents.length?`<details><summary>Time entries (${ents.length})</summary><table class="entries">${rows}</table></details>`:""}</div>`;
+}
 function setChrome(){
   $("#who").textContent = demo ? "Demo mode" : (user ? user.email : "");
   $("#signout").classList.toggle("hidden", !user && !demo);
@@ -254,6 +364,7 @@ function showLogin(){
 async function showList(){
   $("#app").innerHTML = `
     ${demo?'<div class="banner">Demo mode: sample data only. Nothing here is saved.</div>':''}
+    <div id="clockbar"></div>
     <div class="toolbar">
       <input id="q" type="search" placeholder="Search customer, vehicle, or WO #" aria-label="Search work orders" value="${h(filters.q)}">
       <select id="ft" aria-label="Filter by tech"><option value="">All techs</option><option value="__none">Unassigned</option>${TECHS.map(t=>`<option ${t===filters.tech?"selected":""}>${t}</option>`).join("")}</select>
@@ -263,6 +374,7 @@ async function showList(){
     <div id="newform" class="hidden"></div>
     <div id="list">Loading…</div>`;
   $("#ft").value = filters.tech;
+  view = {name:"list"}; refreshClock();
   let rows = [];
   try{ rows = await api.orders(); }catch(e){ $("#list").textContent=""; return fail(e); }
   const draw = ()=>{
@@ -279,12 +391,13 @@ async function showList(){
     $("#list").innerHTML = f.length ? f.map(o=>{
       const lines = [...o.job_lines].sort((a,b)=>a.line_no-b.line_no);
       const done = lines.filter(l=>l.status==="done").length;
+      const tm = sumMs(lines.flatMap(l=>l.time_entries||[]));
       const chips = lines.filter(l=>!QUIET.includes(l.status)).map(l=>`<span class="chip" data-s="${h(l.status)}">Job ${h(l.line_no)}: ${h(STATUS[l.status])}</span>`).join("");
       return `<button class="wo ${isFinished(o)?"finished":""}" data-id="${h(o.id)}">
         <div class="wo-top"><b>${h(o.customer_name)}</b><span class="techtag ${o.tech?"":"none"}">${o.tech?h(o.tech):"Unassigned"}</span></div>
         <div class="sub">${h(o.vehicle||"No vehicle listed")}${o.wo_number?" · WO "+h(o.wo_number):""}</div>
         ${chips?`<div class="chips">${chips}</div>`:""}
-        <div class="progress">${done} of ${lines.length} jobs done</div></button>`;
+        <div class="progress">${done} of ${lines.length} jobs done${tm?" · "+fmtDur(tm)+" logged":""}</div></button>`;
     }).join("") : `<p>No work orders match. Change the filters or use New work order.</p>`;
   };
   draw();
@@ -328,6 +441,7 @@ async function showOrder(id){
       <label>Notes</label>
       <textarea class="nt" placeholder="What was done, what is left, parts needed">${h(l.notes)}</textarea>
       <div class="meta">${l.updated_at?"Last update "+h(fmt(l.updated_at))+(l.updated_by?" by "+h(l.updated_by):""):"No updates yet"}</div>
+      ${timeBox(l)}
       <div class="photos">
         ${l.job_photos.map(p=>`<div class="ph"><img src="${h(p.url)}" alt="Job photo" data-full="${h(p.url)}"><button class="x" data-pid="${h(p.id)}" aria-label="Delete photo">×</button></div>`).join("")}
       </div>
@@ -338,6 +452,7 @@ async function showOrder(id){
     </div>`).join("");
   $("#app").innerHTML = `
     ${demo?'<div class="banner">Demo mode: sample data only. Nothing here is saved.</div>':''}
+    <div id="clockbar"></div>
     <button class="btn plain small back" id="back">All work orders</button>
     <div class="grid2">
       <div class="box"><h2>Customer</h2>
@@ -352,13 +467,15 @@ async function showOrder(id){
         <div class="kv"><span>Plate</span><span>${h(o.plate)}</span></div></div>
     </div>
     <div class="box"><h2>Assigned tech</h2>
-      <select id="tech" aria-label="Assigned tech">${techOptions(o.tech||"")}</select></div>
+      <select id="tech" aria-label="Assigned tech">${techOptions(o.tech||"")}</select>
+      <div class="meta" style="margin-top:8px;font-size:15px">Total time logged on this work order: <b>${liveSpan(o.job_lines.flatMap(l=>l.time_entries||[]),"",true)}</b></div></div>
     <div class="box"><h2>Work order tasks</h2>
       ${lines || "<p>No tasks yet. Add the first one below.</p>"}
       <form class="addrow" id="al"><input id="nl" placeholder="New task, e.g. Replace awning fabric" required aria-label="New task"><button class="btn">Add task</button></form>
     </div>
     <p><button class="btn danger" id="delwo" type="button">Delete this work order</button></p>`;
   $("#back").onclick = showList;
+  view = {name:"order",id:o.id}; refreshClock();
   $("#tech").onchange = async e=>{
     try{ await api.updateOrder(o.id,{tech:e.target.value}); }catch(x){ fail(x); }
   };
@@ -386,6 +503,35 @@ async function showOrder(id){
       el.querySelector(".meta").textContent = "Uploading " + files.length + " photo" + (files.length>1?"s":"") + "…";
       try{ for(const f of files) await api.addPhoto(id, await shrink(f)); showOrder(o.id); }catch(x){ fail(x); showOrder(o.id); }
     };
+    const clk = el.querySelector(".clk");
+    clk.onclick = async ()=>{
+      try{
+        if(clk.dataset.mode==="out"){ await api.clockOut(clk.dataset.eid); }
+        else{
+          await api.clockIn(id);
+          const ln = o.job_lines.find(x=>x.id===id);
+          if(ln && ln.status==="not_started") await api.updateLine(id,{status:"in_progress"});
+        }
+        showOrder(o.id);
+      }catch(x){ fail(x); }
+    };
+    el.querySelectorAll(".editent").forEach(b=>b.onclick = ()=>{
+      const tr = b.closest("tr"), eid = tr.dataset.eid;
+      tr.innerHTML = `<td colspan="4"><label>Clock in<input type="datetime-local" class="ei" value="${toLocal(tr.dataset.in)}"></label>
+        <label>Clock out (leave blank if still working)<input type="datetime-local" class="eo" value="${toLocal(tr.dataset.out)}"></label>
+        <div class="line-actions"><button class="btn small saveent" type="button">Save</button><button class="btn danger small delent" type="button">Delete entry</button><button class="btn plain small cancelent" type="button">Cancel</button></div></td>`;
+      tr.querySelector(".cancelent").onclick = ()=>showOrder(o.id);
+      tr.querySelector(".delent").onclick = async ()=>{
+        if(!confirm("Delete this time entry?")) return;
+        try{ await api.delEntry(eid); showOrder(o.id); }catch(x){ fail(x); }
+      };
+      tr.querySelector(".saveent").onclick = async ()=>{
+        const i = fromLocal(tr.querySelector(".ei").value), out = fromLocal(tr.querySelector(".eo").value);
+        if(!i){ alert("Enter a clock in time."); return; }
+        if(out && new Date(out) <= new Date(i)){ alert("Clock out must be after clock in."); return; }
+        try{ await api.updateEntry(eid,{clock_in:i,clock_out:out}); showOrder(o.id); }catch(x){ fail(x); }
+      };
+    });
     el.querySelector(".delline").onclick = async ()=>{
       if(!confirm("Delete this task and its photos? This cannot be undone.")) return;
       try{ await api.delLine(id); showOrder(o.id); }catch(x){ fail(x); }
