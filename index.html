@@ -109,9 +109,11 @@ details summary{cursor:pointer;margin-top:8px;color:var(--blue);font-weight:600}
 .pstate[data-st=ordered]{background:var(--c-parts_on_order);color:#fff}
 .pstate[data-st=received]{background:var(--c-done);color:#fff}
 .part .line-actions{margin-top:6px}
-.partform{display:grid;grid-template-columns:1.4fr .6fr 2fr 1.4fr auto;gap:6px;margin-top:8px}
-.partform input,.partform select{padding:8px}
-@media(max-width:700px){.partform{grid-template-columns:1fr 1fr}.partform input[name=description]{grid-column:1/-1}}
+.partform{display:grid;grid-template-columns:2fr .6fr 1.6fr auto;gap:6px;margin-top:8px}
+.partform input,.partform select,.partform textarea{padding:8px}
+.partform textarea{grid-column:1/-1;min-height:84px;line-height:1.35}
+.pdesc{white-space:pre-wrap;overflow-wrap:anywhere;flex:1;min-width:0}
+@media(max-width:700px){.partform{grid-template-columns:1fr 1fr}.partform .btn{grid-column:1/-1}}
 .agebar{font-size:14px;margin:6px 0;color:var(--muted)}
 .agebar.needs,.needs{color:var(--c-pna);font-weight:700}
 .pq{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--c-parts_on_order);border-radius:4px;padding:12px 14px;margin-bottom:10px}
@@ -464,7 +466,7 @@ function partItem(p){
     if(p.state!=="received") btns.push(partBtn(p,"note","Add note"));
   }
   if(manage || (own && (p.state==="requested" || p.state==="used"))) btns.push(partBtn(p,"remove","Remove"));
-  return `<div class="part"><div class="ptop"><span><b>${h(+p.qty)}×</b> ${h(p.description)}${p.part_number?` <span class="meta">#${h(p.part_number)}</span>`:""}</span><span class="pstate" data-st="${h(p.state)}">${h(PART_STATE[p.state]||p.state)}</span></div>
+  return `<div class="part"><div class="ptop"><span class="pdesc"><b>${h(+p.qty)}×</b> ${h(p.description)}${p.part_number?` <span class="meta">#${h(p.part_number)}</span>`:""}</span><span class="pstate" data-st="${h(p.state)}">${h(PART_STATE[p.state]||p.state)}</span></div>
     ${p.note?`<div class="meta">Note: ${h(p.note)}</div>`:""}
     <div class="meta">Entered ${h(fmt(p.created_at))} by ${h(nameOf(p.created_by))}${p.state==="requested"||p.state==="ordered"?" · updated "+h(ago(new Date(p.updated_at).getTime())):""}</div>
     ${btns.length?`<div class="line-actions">${btns.join("")}</div>`:""}</div>`;
@@ -478,9 +480,9 @@ function partsBox(l){
     age = `<div class="agebar ${a.stale?"needs":""}">${h(STATUS[l.status])} since ${h(fmt(a.entered))} (${h(ago(a.entered))}) · last update ${h(ago(a.last))}${a.stale?" · NEEDS UPDATE":""}</div>`;
   }
   const form = (canWork() || isParts()) ? `<form class="partform" data-lid="${h(l.id)}">
+      <textarea name="description" rows="3" required aria-label="Part or details" placeholder="Part name, or explain what you need in a few sentences"></textarea>
       <select name="kind" aria-label="Type"><option value="request">Request part (sets PNA)</option><option value="used">Parts used</option></select>
       <input name="qty" type="number" min="0" step="any" value="1" aria-label="Quantity">
-      <input name="description" placeholder="Part name" required aria-label="Part name">
       <input name="part_number" placeholder="Part # (optional)" aria-label="Part number">
       <button class="btn small">Add</button></form>` : "";
   return `<div class="partsbox"><b>Parts</b>${age}
