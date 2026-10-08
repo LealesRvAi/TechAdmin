@@ -115,6 +115,7 @@ details summary{cursor:pointer;margin-top:8px;color:var(--blue);font-weight:600}
 const SB_URL = "https://emlauoiecckbqriirttn.supabase.co";
 const SB_KEY = "sb_publishable_-_iDLW4lEwc0necBCcNeAA_jb_oKPfh";
 const TECHS = ["Victor","Chewie","Marcos","Ceaser","Axel","Heather","Michael"];
+const MANAGERS = ["michael@leales.com","savio@leales.com"]; // these logins see who is clocked in on the main page
 const STATUS = {
   not_started:"Not started", in_progress:"In progress", tore_down:"Tore down",
   parts_on_order:"Parts on order", pna:"PNA", on_hold:"On hold", done:"Done"
@@ -182,6 +183,10 @@ const real = {
     const {error} = await sb.from("job_photos").insert({job_line_id:lineId,path,uploaded_by:user.email});
     if(error) throw error;
   },
+  async openEntries(){
+    const {data,error} = await sb.from("time_entries").select("*, job_lines(line_no,title,work_order_id,work_orders(customer_name,vehicle))").is("clock_out",null);
+    if(error) throw error; return data || [];
+  },
   async myOpen(){
     const {data,error} = await sb.from("time_entries").select("*, job_lines(line_no,title,work_order_id,work_orders(customer_name))").eq("tech_email",user.email).is("clock_out",null).limit(1);
     if(error) throw error; return (data && data[0]) || null;
@@ -234,8 +239,8 @@ const allEntries = fn => D.orders.forEach(o=>o.job_lines.forEach(l=>(l.time_entr
   const H = 3600000, t0 = Date.now();
   const te = (a,b,who)=>({id:"t"+Math.random(),tech_email:who,clock_in:new Date(t0-a*H).toISOString(),clock_out:b==null?null:new Date(t0-b*H).toISOString()});
   D.orders[0].job_lines[0].time_entries = [te(30,28.5,"victor@shop"),te(27,25,"victor@shop")];
-  D.orders[0].job_lines[1].time_entries = [te(5,4,"victor@shop")];
-  D.orders[1].job_lines[0].time_entries = [te(26,24,"chewie@shop")];
+  D.orders[0].job_lines[1].time_entries = [te(5,4,"victor@shop"),te(0.5,null,"victor@shop")];
+  D.orders[1].job_lines[0].time_entries = [te(26,24,"chewie@shop"),te(1.2,null,"chewie@shop")];
 })();
 const fake = {
   async orders(){return D.orders.map(o=>({...o,job_lines:o.job_lines.map(l=>({id:l.id,line_no:l.line_no,title:l.title,status:l.status,time_entries:l.time_entries||[]}))}))},
@@ -248,6 +253,13 @@ const fake = {
   async delLine(id){D.orders.forEach(o=>{o.job_lines=o.job_lines.filter(l=>l.id!==id)})},
   async addPhoto(lineId,blob){D.orders.forEach(o=>o.job_lines.forEach(l=>{if(l.id===lineId)l.job_photos.push({id:"p"+Date.now(),url:URL.createObjectURL(blob)})}))},
   async delPhoto(p){D.orders.forEach(o=>o.job_lines.forEach(l=>{l.job_photos=l.job_photos.filter(x=>x.id!==p.id)}))},
+  async openEntries(){
+    const out = [];
+    D.orders.forEach(o=>o.job_lines.forEach(l=>(l.time_entries||[]).forEach(e=>{
+      if(!e.clock_out) out.push({...e,job_lines:{line_no:l.line_no,title:l.title,work_order_id:o.id,work_orders:{customer_name:o.customer_name,vehicle:o.vehicle}}});
+    })));
+    return out;
+  },
   async myOpen(){
     for(const o of D.orders) for(const l of o.job_lines) for(const e of (l.time_entries||[]))
       if(e.tech_email==="demo" && !e.clock_out) return {...e,job_lines:{line_no:l.line_no,title:l.title,work_order_id:o.id,work_orders:{customer_name:o.customer_name}}};
@@ -305,6 +317,25 @@ function tickLive(){
   });
 }
 setInterval(tickLive, 30000);
+
+const isManager = () => demo || (user && MANAGERS.includes(String(user.email).toLowerCase()));
+function workingPanel(list){
+  if(!list.length) return `<div class="box"><h2>Clocked in now</h2><div class="meta" style="font-size:15px">Nobody is clocked in right now.</div></div>`;
+  return `<div class="box"><h2>Clocked in now</h2>` + list.map(e=>{
+    const l = e.job_lines || {}, w = l.work_orders || {};
+    return `<button class="wo" type="button" data-id="${h(l.work_order_id)}" style="margin-bottom:6px">
+      <div class="wo-top"><b>${h(nameOf(e.tech_email))}</b><span class="techtag">${liveSpan([e])}</span></div>
+      <div class="sub">Job ${h(l.line_no)}: ${h(l.title)} · ${h(w.customer_name)}${w.vehicle?" · "+h(w.vehicle):""}</div></button>`;
+  }).join("") + `</div>`;
+}
+async function refreshWorking(){
+  const box = $("#working"); if(!box || !isManager()) return [];
+  let list = []; try{ list = await api.openEntries(); }catch(e){}
+  list.sort((a,b)=>nameOf(a.tech_email).localeCompare(nameOf(b.tech_email)));
+  box.innerHTML = workingPanel(list);
+  return list;
+}
+setInterval(()=>{ if(view.name==="list" && api) refreshWorking(); }, 30000);
 
 async function refreshClock(){
   const box = $("#clockbar"); if(!box) return;
@@ -365,6 +396,7 @@ async function showList(){
   $("#app").innerHTML = `
     ${demo?'<div class="banner">Demo mode: sample data only. Nothing here is saved.</div>':''}
     <div id="clockbar"></div>
+    <div id="working"></div>
     <div class="toolbar">
       <input id="q" type="search" placeholder="Search customer, vehicle, or WO #" aria-label="Search work orders" value="${h(filters.q)}">
       <select id="ft" aria-label="Filter by tech"><option value="">All techs</option><option value="__none">Unassigned</option>${TECHS.map(t=>`<option ${t===filters.tech?"selected":""}>${t}</option>`).join("")}</select>
@@ -377,6 +409,8 @@ async function showList(){
   view = {name:"list"}; refreshClock();
   let rows = [];
   try{ rows = await api.orders(); }catch(e){ $("#list").textContent=""; return fail(e); }
+  const onNow = await refreshWorking();
+  $("#working").onclick = e=>{ const b = e.target.closest(".wo"); if(b) showOrder(b.dataset.id); };
   const draw = ()=>{
     const q = filters.q.toLowerCase();
     const f = rows.filter(o=>{
@@ -392,12 +426,14 @@ async function showList(){
       const lines = [...o.job_lines].sort((a,b)=>a.line_no-b.line_no);
       const done = lines.filter(l=>l.status==="done").length;
       const tm = sumMs(lines.flatMap(l=>l.time_entries||[]));
+      const here = onNow.filter(e=>e.job_lines && e.job_lines.work_order_id===o.id);
       const chips = lines.filter(l=>!QUIET.includes(l.status)).map(l=>`<span class="chip" data-s="${h(l.status)}">Job ${h(l.line_no)}: ${h(STATUS[l.status])}</span>`).join("");
       return `<button class="wo ${isFinished(o)?"finished":""}" data-id="${h(o.id)}">
         <div class="wo-top"><b>${h(o.customer_name)}</b><span class="techtag ${o.tech?"":"none"}">${o.tech?h(o.tech):"Unassigned"}</span></div>
         <div class="sub">${h(o.vehicle||"No vehicle listed")}${o.wo_number?" · WO "+h(o.wo_number):""}</div>
         ${chips?`<div class="chips">${chips}</div>`:""}
-        <div class="progress">${done} of ${lines.length} jobs done${tm?" · "+fmtDur(tm)+" logged":""}</div></button>`;
+        <div class="progress">${done} of ${lines.length} jobs done${tm?" · "+fmtDur(tm)+" logged":""}</div>
+        ${here.length?`<div class="progress"><b>Working now:</b> ${here.map(e=>h(nameOf(e.tech_email))+" (Job "+h(e.job_lines.line_no)+")").join(", ")}</div>`:""}</button>`;
     }).join("") : `<p>No work orders match. Change the filters or use New work order.</p>`;
   };
   draw();
