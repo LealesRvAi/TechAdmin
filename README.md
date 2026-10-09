@@ -31,7 +31,7 @@ TechAdmin is built through collaboration, shared ideas, testing, and continuous 
 
 ### Co-Creators
 
-* **Savio M.** — Co-Creator & Marketing
+* **Savio Motha** — Co-Founder & Marketing
 * **Victor L.** — Co-Creator & Contributor / Tester
 
 We appreciate the time, ideas, and effort contributed to making TechAdmin better. This section will continue to grow as more people contribute to the project.
