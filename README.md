@@ -1,6 +1,10 @@
-# TechAdmin
+<div align="center"> <img width="250" alt="TechAdmin Logo" src="https://github.com/user-attachments/assets/2b2f315d-8b11-454f-a8c8-2e45193c5df7" />
 
-**Simple shop management. Organized work orders. Better workflow.**
+Simple shop management. Organized work orders. Better workflow.
+
+</div>
+
+---
 
 TechAdmin is a shop management application designed to help repair shops organize work orders, coordinate technicians and parts, manage daily operations, and improve overall productivity.
 
