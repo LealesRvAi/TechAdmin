@@ -1,24 +1,63 @@
-# Shop Work Orders: setup
+# TechAdmin
 
-## 1. Supabase (one time)
-1. Open your project at supabase.com, then **SQL Editor > New query**.
-2. Paste all of `schema.sql` and click **Run**. This creates the tables, locks them to signed-in users, and creates the private `job-photos` bucket.
-3. **Authentication > Users > Add user**: enter your tech's email and a password. Tick "Auto Confirm User".
-4. **Authentication > Sign In / Providers (or Settings)**: turn **off** "Allow new users to sign up" so nobody else can create an account.
-5. Add your own account the same way.
+**Simple shop management. Organized work orders. Better workflow.**
 
-## 2. GitHub Pages
-1. Create a new GitHub repo (public is fine; there are no secrets in the code).
-2. Upload `index.html` to the repo root.
-3. **Settings > Pages > Build and deployment**: Source = "Deploy from a branch", Branch = `main`, folder `/ (root)`. Save.
-4. After a minute your site is at `https://YOUR-USERNAME.github.io/REPO-NAME/`.
+TechAdmin is a shop management application designed to help repair shops organize work orders, coordinate technicians and parts, manage daily operations, and improve overall productivity.
 
-## 3. Using it
-- Sign in, tap **New work order**, add tasks, then the tech sets status, types notes, and taps **Add photo** (opens the phone camera).
-- Photos are shrunk to about 1600px before upload to stay inside the 1 GB free storage.
-- "Look around in demo mode" on the sign-in screen shows sample data and saves nothing.
+Our goal is to provide the tools shops need to operate efficiently without making everyday tasks unnecessarily complicated. TechAdmin is being developed with a focus on simplicity, usability, and a smooth workflow from start to finish.
 
-## Notes
-- Every signed-in user can see and edit every work order. If you later want a read-only role or per-tech limits, that's a change to the SQL policies.
-- Free Supabase projects pause after 7 days with no activity. If the page stops loading, click Restore in the Supabase dashboard.
-- Free projects have no automatic backups. Don't treat this as your only copy of real records yet.
+## Our Mission
+
+To make shop management easier by bringing work orders, technician coordination, parts tracking, and workflow management together in one straightforward application.
+
+We believe shop software should help people get work done, not create more work.
+
+## Project Goals
+
+* **Simple to Use:** Keep the interface intuitive and easy to navigate.
+* **Organized Work Orders:** Make it easier to track jobs, updates, and progress.
+* **Improved Workflow:** Help shops coordinate service operations from start to finish.
+* **Parts Coordination:** Improve communication between parts departments and technicians.
+* **Productivity & Accountability:** Make job status and workflow progress easier to monitor.
+* **Continuous Improvement:** Build useful features based on real shop needs and feedback.
+
+## Co-Creators & Contributors
+
+TechAdmin is built through collaboration, shared ideas, testing, and continuous improvement. This section recognizes the people helping shape the project.
+
+### Co-Creators
+
+* **Savio M.** — Co-Creator & Marketing
+* **Victor L.** — Co-Creator & Contributor / Tester
+
+We appreciate the time, ideas, and effort contributed to making TechAdmin better. This section will continue to grow as more people contribute to the project.
+
+## Future Updates & Roadmap
+
+TechAdmin is an evolving project. Future updates will focus on improving workflow visibility, reducing administrative overhead, and making daily shop operations more efficient.
+
+### Planned Improvements
+
+* [ ] **Enhanced Parts Tracking** — Track part numbers, vendors, order status, estimated arrival dates, and costs.
+* [X] **Parts Department Notes** — Allow parts staff to record order updates, supplier conversations, and important details.
+* [X] **Automated Follow-Up Timers** — Track outstanding parts requests and reset follow-up timers whenever a relevant update is entered.
+* [X] **Improved Technician Visibility** — Give technicians visibility into work orders across the shop to improve coordination.
+* [X] **Work Order Status Tracking** — Make it easier to identify active jobs, waiting parts, pending work, and completed repairs.
+* [ ] **Workflow Notifications** — Help staff identify overdue updates and jobs that need attention.
+* [ ] **Productivity Dashboard** — Provide a clearer overview of shop activity, outstanding work, and workflow bottlenecks.
+* [ ] **Reporting & Statistics** — Explore reporting tools to help managers understand shop performance and workload.
+* [ ] **User Interface Improvements** — Continue refining navigation and everyday workflows to keep TechAdmin simple and efficient.
+
+*Roadmap items are subject to change as development priorities evolve. Not all listed features are currently available.*
+
+## Built Around Real Shop Needs
+
+TechAdmin is intended to solve practical problems that shop staff encounter every day: keeping work orders organized, tracking parts, communicating updates, and understanding what needs attention next.
+
+The objective is not to overload the application with unnecessary features. It is to build a reliable set of tools that work together and make shop operations easier to manage.
+
+## 📬 Feedback & Contributions
+
+Ideas, feedback, and contributions are welcome. Suggestions that improve usability, simplify workflows, and address real shop challenges help guide the continued development of TechAdmin.
+
+Thank you to everyone helping make TechAdmin better.
